@@ -21,8 +21,6 @@ def train_model():
     else:
         mlflow.set_tracking_uri("file:./mlruns")
 
-    # Removed set_experiment so it logs to the default '0' experiment on DAGsHub
-
     with mlflow.start_run():
         n_estimators = 100
         max_depth = 5
@@ -37,7 +35,9 @@ def train_model():
         accuracy = accuracy_score(y_test, predictions)
 
         mlflow.log_metric("accuracy", accuracy)
-        mlflow.sklearn.log_model(model, name="model")
+        
+        # Reverted back to artifact_path
+        mlflow.sklearn.log_model(model, artifact_path="model")
 
         os.makedirs("models", exist_ok=True)
         joblib.dump(model, "models/model.joblib")
