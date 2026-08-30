@@ -1,4 +1,5 @@
 import os
+import tempfile
 import joblib
 import mlflow
 import mlflow.sklearn
@@ -16,22 +17,12 @@ def train_model():
   X_test = test_df.drop('failure', axis=1)
   y_test = test_df['failure']
 
-  # Create a clean local artifact directory dynamically
-  artifact_dir = os.path.abspath('./mlruns_artifacts')
-  os.makedirs(artifact_dir, exist_ok=True)
+  # Store MLflow runs strictly inside system temp (/tmp on Linux, Temp on Windows)
+  temp_mlruns = os.path.join(tempfile.gettempdir(), 'mlruns_ci')
+  mlflow.set_tracking_uri(f'file://{temp_mlruns}')
+  mlflow.set_experiment('Vehicle_Maintenance_Prediction')
 
-  mlflow.set_tracking_uri('file:./mlruns')
-
-  # Use a distinct experiment name to prevent reading stale Windows metadata
-  experiment_name = 'Vehicle_Maintenance_CI'
-  try:
-    exp_id = mlflow.create_experiment(
-        experiment_name, artifact_location=f'file://{artifact_dir}'
-    )
-  except Exception:
-    exp_id = mlflow.get_experiment_by_name(experiment_name).experiment_id
-
-  with mlflow.start_run(experiment_id=exp_id):
+  with mlflow.start_run():
     n_estimators = 100
     max_depth = 5
 
@@ -47,7 +38,7 @@ def train_model():
     accuracy = accuracy_score(y_test, predictions)
 
     mlflow.log_metric('accuracy', accuracy)
-    mlflow.sklearn.log_model(model, artifact_path='random_forest_model')
+    mlflow.sklearn.log_model(model, artifact_path='model')
 
     os.makedirs('models', exist_ok=True)
     joblib.dump(model, 'models/model.joblib')
