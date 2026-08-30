@@ -1,10 +1,14 @@
-name: MLOps CI/CD Pipeline
+name: MLOps CI/CD & Continuous Retraining Pipeline
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  schedule:
+    # Trigger automated retraining every Monday at midnight UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -41,12 +45,22 @@ jobs:
       run: |
         python -m pytest
 
+    - name: Run Data Drift Monitoring
+      run: |
+        python src/monitor.py
+
+    - name: Upload Drift Report Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: data-drift-report
+        path: reports/data_drift_report.html
+
     - name: Convert repository name to lowercase
       run: |
         echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
     - name: Log in to GitHub Container Registry
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
       uses: docker/login-action@v3
       with:
         registry: ghcr.io
@@ -54,7 +68,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and Push Docker Image
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
       uses: docker/build-push-action@v6
       with:
         context: .
@@ -62,3 +76,8 @@ jobs:
         tags: |
           ghcr.io/${{ env.IMAGE_NAME }}:latest
           ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+    - name: Trigger Render Deployment
+      if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'schedule')
+      run: |
+        curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
