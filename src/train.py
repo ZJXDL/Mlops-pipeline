@@ -16,7 +16,7 @@ def train_model():
   X_test = test_df.drop('failure', axis=1)
   y_test = test_df['failure']
 
-  # Use a relative local path for MLflow tracking inside the current directory
+  # Enforce relative tracking URI
   mlflow.set_tracking_uri('file:./mlruns')
   mlflow.set_experiment('Vehicle_Maintenance_Prediction')
 
@@ -37,8 +37,8 @@ def train_model():
 
     mlflow.log_metric('accuracy', accuracy)
 
-    # Updated 'name' parameter for newer MLflow versions
-    mlflow.sklearn.log_model(model, name='random_forest_model')
+    # Clean model logging
+    mlflow.sklearn.log_model(model, artifact_path='random_forest_model')
 
     os.makedirs('models', exist_ok=True)
     joblib.dump(model, 'models/model.joblib')
