@@ -32,8 +32,10 @@ jobs:
         python src/train.py
 
     - name: Run Unit Tests
+      env:
+        PYTHONPATH: .
       run: |
-        pytest
+        python -m pytest
 
     - name: Build Docker Image
       run: |
