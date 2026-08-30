@@ -16,11 +16,22 @@ def train_model():
   X_test = test_df.drop('failure', axis=1)
   y_test = test_df['failure']
 
-  # Use SQLite backend to prevent OS-specific path conflicts
-  mlflow.set_tracking_uri('sqlite:///mlflow.db')
-  mlflow.set_experiment('Vehicle_Maintenance_Prediction')
+  # Create a clean local artifact directory dynamically
+  artifact_dir = os.path.abspath('./mlruns_artifacts')
+  os.makedirs(artifact_dir, exist_ok=True)
 
-  with mlflow.start_run():
+  mlflow.set_tracking_uri('file:./mlruns')
+
+  # Use a distinct experiment name to prevent reading stale Windows metadata
+  experiment_name = 'Vehicle_Maintenance_CI'
+  try:
+    exp_id = mlflow.create_experiment(
+        experiment_name, artifact_location=f'file://{artifact_dir}'
+    )
+  except Exception:
+    exp_id = mlflow.get_experiment_by_name(experiment_name).experiment_id
+
+  with mlflow.start_run(experiment_id=exp_id):
     n_estimators = 100
     max_depth = 5
 
@@ -36,7 +47,6 @@ def train_model():
     accuracy = accuracy_score(y_test, predictions)
 
     mlflow.log_metric('accuracy', accuracy)
-
     mlflow.sklearn.log_model(model, artifact_path='random_forest_model')
 
     os.makedirs('models', exist_ok=True)
