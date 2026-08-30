@@ -15,15 +15,13 @@ def train_model():
     X_test = test_df.drop("failure", axis=1)
     y_test = test_df["failure"]
 
-    # Use DAGsHub MLflow tracking if credentials exist, otherwise fallback to local file store
     dagshub_uri = os.getenv("MLFLOW_TRACKING_URI")
     if dagshub_uri:
         mlflow.set_tracking_uri(dagshub_uri)
     else:
-        # Explicit relative URI for Linux runners
         mlflow.set_tracking_uri("file:./mlruns")
 
-    mlflow.set_experiment("Vehicle_Maintenance_Prediction")
+    # Removed set_experiment so it logs to the default '0' experiment on DAGsHub
 
     with mlflow.start_run():
         n_estimators = 100
@@ -39,8 +37,6 @@ def train_model():
         accuracy = accuracy_score(y_test, predictions)
 
         mlflow.log_metric("accuracy", accuracy)
-
-        # Updated to use `name` instead of deprecated `artifact_path`
         mlflow.sklearn.log_model(model, name="model")
 
         os.makedirs("models", exist_ok=True)
