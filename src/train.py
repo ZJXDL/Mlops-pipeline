@@ -16,8 +16,8 @@ def train_model():
   X_test = test_df.drop('failure', axis=1)
   y_test = test_df['failure']
 
-  # Enforce relative tracking URI
-  mlflow.set_tracking_uri('file:./mlruns')
+  # Use SQLite backend to prevent OS-specific path conflicts
+  mlflow.set_tracking_uri('sqlite:///mlflow.db')
   mlflow.set_experiment('Vehicle_Maintenance_Prediction')
 
   with mlflow.start_run():
@@ -37,7 +37,6 @@ def train_model():
 
     mlflow.log_metric('accuracy', accuracy)
 
-    # Clean model logging
     mlflow.sklearn.log_model(model, artifact_path='random_forest_model')
 
     os.makedirs('models', exist_ok=True)
