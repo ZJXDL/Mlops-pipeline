@@ -26,6 +26,7 @@ jobs:
 
     - name: Run Data Preprocessing & Training
       run: |
+        rm -rf mlruns
         python src/preprocess.py
         python src/train.py
 
